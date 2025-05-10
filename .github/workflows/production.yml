@@ -29,7 +29,7 @@ jobs:
 
       - name: Copiar arquivos para a EC2
         run: |
-          scp -o StrictHostKeyChecking=no -i ~/.ssh/my-key.pem * ${{ secrets.AWS_EC2_USER }}@${{ secrets.AWS_SECRET_IP }}:/home/${{ secrets.AWS_EC2_USER }}/deploy/
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/my-key.pem -r . ${{ secrets.AWS_EC2_USER }}@${{ secrets.AWS_SECRET_IP }}:/home/${{ secrets.AWS_EC2_USER }}/deploy/
 
       - name: Conectar à EC2 e executar comandos de deploy
         run: |
