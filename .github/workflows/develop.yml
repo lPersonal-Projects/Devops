@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "develop" ]
   pull_request:
-    branches: [ "develop" ]
+    branches: [ "main" ]
 
 jobs:
   build-and-test-dev:
@@ -14,11 +14,8 @@ jobs:
     - name: Checkout do código
       uses: actions/checkout@v3
 
-    - name: Build da imagem Docker
-      run: docker build -t simple-node-status-dev status/.
-
-    - name: Subir container em background
-      run: docker run -d -p 3000:3000 --name status-dev simple-node-status-dev
+    - name: Build da imagem Docker e Subir container em background
+      run: ./deploy.sh
 
     - name: Aguardar a aplicação subir
       run: sleep 10

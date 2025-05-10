@@ -1,0 +1,34 @@
+name: Deploy para AWS EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v3
+
+      - name: Configurar AWS CLI
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Definir chave SSH para acesso à EC2
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AWS_SSH_PRIVATE_KEY }}" > ~/.ssh/my-key.pem
+          chmod 600 ~/.ssh/my-key.pem
+
+      - name: Copiar arquivos para a EC2
+        run: |
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/my-key.pem ./build/* ${{ secrets.AWS_EC2_USER }}@${{ secrets.AWS_SECRET_IP }}:/home/${{ secrets.AWS_EC2_USER }}/deploy/
+
+      - name: Conectar à EC2 e executar comandos de deploy
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/my-key.pem ${{ secrets.AWS_EC2_USER }}@${{ secrets.AWS_SECRET_IP }} "cd /home/${{ secrets.AWS_EC2_USER }}/deploy && ./deploy.sh"
