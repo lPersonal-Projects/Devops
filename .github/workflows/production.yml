@@ -1,4 +1,4 @@
-name: CI/CD - Production
+name: Deploy para AWS EC2
 
 on:
   push:
@@ -6,38 +6,29 @@ on:
       - main
 
 jobs:
-  build-test-push-prod:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout do código
-      uses: actions/checkout@v3
+      - name: Checkout do código
+        uses: actions/checkout@v3
 
-    - name: Build da imagem Docker
-      run: docker build -t ${{ secrets.DOCKER_USERNAME }}/simple-node-status:latest .
+      - name: Configurar AWS CLI
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-    - name: Subir container em background
-      run: docker run -d -p 3000:3000 --name status-prod ${{ secrets.DOCKER_USERNAME }}/simple-node-status:latest
+      - name: Definir chave SSH para acesso à EC2
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AWS_SSH_PRIVATE_KEY }}" > ~/.ssh/my-key.pem
+          chmod 600 ~/.ssh/my-key.pem
 
-    - name: Aguardar a aplicação subir
-      run: sleep 5
+      - name: Copiar arquivos para a EC2
+        run: |
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/my-key.pem ./build/* ${{ secrets.AWS_EC2_USER }}@${{ secrets.AWS_SECRET_IP }}:/home/${{ secrets.AWS_EC2_USER }}/deploy/
 
-    - name: Testar endpoint /status
-      run: |
-        STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/status)
-        if [ "$STATUS" != "200" ]; then
-          echo "Erro: status da aplicação é $STATUS"
-          exit 1
-        fi
-
-    - name: Parar e remover o container
-      run: docker rm -f status-prod
-
-    - name: Login no Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-
-    - name: Push para o Docker Hub
-      run: docker push ${{ secrets.DOCKER_USERNAME }}/simple-node-status:latest
+      - name: Conectar à EC2 e executar comandos de deploy
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/my-key.pem ${{ secrets.AWS_EC2_USER }}@${{ secrets.AWS_SECRET_IP }} "cd /home/${{ secrets.AWS_EC2_USER }}/deploy && ./deploy.sh"
