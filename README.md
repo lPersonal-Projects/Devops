@@ -95,4 +95,3 @@ No GitHub, defina os seguintes segredos:
 - GitHub Actions ativado no repositório
 - A instância EC2 deve aceitar conexões SSH e permitir `rsync`/`scp`
 
-
