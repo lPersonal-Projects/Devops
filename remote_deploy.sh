@@ -19,15 +19,6 @@ cd "/home/$USER/current"
 
 echo "Executando deploy.sh..."
 
-if ls acme.json 2>/dev/null; then
-  echo "Arquivo acme.json encontrado, aplicando permissões..."
-  chmod 600 acme.json
-else
-  echo "Arquivo acme.json não encontrado, criando novo arquivo..."
-  touch acme.json
-  chmod 600 acme.json
-fi
-
 if docker compose up -d; then
   echo "Deploy bem-sucedido!"
 else

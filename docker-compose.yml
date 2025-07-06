@@ -2,29 +2,49 @@ services:
   traefik:
     image: "traefik:v3.0"
     container_name: "traefik"
+    # --- CORREÇÃO: Comandos de inicialização ---
+    # Removido "--api.insecure=true" para não expor o dashboard sem segurança.
+    # O dashboard será configurado via labels, que é a forma correta.
     command:
-      - "--api.insecure=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.le.acme.email=cleyton@gmail.com"
-      - "--certificatesresolvers.le.acme.storage=/acme.json"
+      - "--certificatesresolvers.le.acme.email=cleyton@gmail.com" # Use seu e-mail real
+      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json" # Alterado para um subdiretório por organização
       - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
+      - "--api.dashboard=true" # Habilita o dashboard, que será exposto via roteador seguro
+      - "--log.level=INFO" # Adiciona log para facilitar a depuração
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - "./acme.json:/acme.json"
+      # O arquivo acme.json será criado dentro do diretório letsencrypt
+      - "./letsencrypt:/letsencrypt"
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     labels:
+      # --- Rótulos para o Dashboard do Traefik ---
       - "traefik.enable=true"
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
-      - "traefik.http.routers.dashboard.service=api@internal"
+
+      # 1. Middleware de redirecionamento HTTP para HTTPS
+      - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
+
+      # 2. Middleware de autenticação para o dashboard (SEGURANÇA!)
+      # GERE O SEU PRÓPRIO! Use: htpasswd -nb seu_usuario sua_senha
+      - "traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$apr1$$5lB3h58a$$9znoS/fB.MDjR4xb3b9lT1"
+
+      # 3. Roteador SEGURO (HTTPS) para o dashboard
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.devopslacrei.duckdns.org`)"
       - "traefik.http.routers.dashboard.entrypoints=websecure"
       - "traefik.http.routers.dashboard.tls.certresolver=le"
+      - "traefik.http.routers.dashboard.service=api@internal" # Usa o serviço interno do Traefik API
+      - "traefik.http.routers.dashboard.middlewares=dashboard-auth" # Aplica a autenticação
+
+      # 4. Roteador HTTP para o dashboard (apenas para redirecionar)
+      - "traefik.http.routers.dashboard-http.rule=Host(`traefik.devopslacrei.duckdns.org`)"
       - "traefik.http.routers.dashboard-http.entrypoints=web"
-      - "traefik.http.routers.dashboard-http.middlewares=redirect-to-https"
+      - "traefik.http.routers.dashboard-http.middlewares=https-redirect" # Aplica o redirecionamento
+
     networks:
       - traefik-net
 
@@ -32,18 +52,29 @@ services:
     build:
       context: ./status
     image: simple-node-status-dev
-    ports:
-      - "3000:3000"
+    # A porta não precisa ser exposta ao host, Traefik se comunica pela rede interna do Docker.
+    # ports:
+    #   - "3000:3000"
     container_name: status-dev
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.devops.rule=Host(`devopslacrei.duckdns.org`)"
-      - "traefik.http.routers.devops.entrypoints=websecure"
-      - "traefik.http.routers.devops.tls.certresolver=le"
-      - "traefik.http.routers.devops-http.rule=Host(`devopslacrei.duckdns.org`)"
-      - "traefik.http.routers.devops-http.entrypoints=web"
-      - "traefik.http.routers.devops-http.middlewares=redirect-to-https"
+
+      # --- Roteadores para o serviço 'status-dev' ---
+      # CORREÇÃO: Definindo um serviço do Traefik para apontar para a porta 3000 deste container
+      - "traefik.http.services.status-service.loadbalancer.server.port=3000"
+
+      # 1. Roteador SEGURO (HTTPS) para a aplicação
+      - "traefik.http.routers.status-app.rule=Host(`devopslacrei.duckdns.org`)"
+      - "traefik.http.routers.status-app.entrypoints=websecure"
+      - "traefik.http.routers.status-app.tls.certresolver=le"
+      - "traefik.http.routers.status-app.service=status-service"
+
+      # 2. Roteador HTTP para a aplicação (apenas para redirecionar)
+      - "traefik.http.routers.status-app-http.rule=Host(`devopslacrei.duckdns.org`)"
+      - "traefik.http.routers.status-app-http.entrypoints=web"
+      - "traefik.http.routers.status-app-http.middlewares=https-redirect@docker"
+
     networks:
       - traefik-net
 
