@@ -38,10 +38,10 @@ services:
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.devops.rule=Host(`3.148.145.243`)"
+      - "traefik.http.routers.devops.rule=Host(`devopslacrei.duckdns.org`)"
       - "traefik.http.routers.devops.entrypoints=websecure"
       - "traefik.http.routers.devops.tls.certresolver=le"
-      - "traefik.http.routers.devops-http.rule=Host(`3.148.145.243`)"
+      - "traefik.http.routers.devops-http.rule=Host(`devopslacrei.duckdns.org`)"
       - "traefik.http.routers.devops-http.entrypoints=web"
       - "traefik.http.routers.devops-http.middlewares=redirect-to-https"
     networks:
