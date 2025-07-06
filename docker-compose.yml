@@ -8,13 +8,12 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.meu_resolver_le.acme.email=cleytonnobre@outlook.com"
+      - "--certificatesresolvers.meu_resolver_le.acme.email=cleyton@gmail.com"
       - "--certificatesresolvers.meu_resolver_le.acme.storage=/acme.json"
       - "--certificatesresolvers.meu_resolver_le.acme.httpchallenge.entrypoint=web"
     ports:
       - "80:80"
       - "443:443"
-      - "8080:8080"
     volumes:
       - "./acme.json:/acme.json"
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
