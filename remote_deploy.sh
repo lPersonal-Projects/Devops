@@ -18,7 +18,7 @@ ln -sfn "$NEW_RELEASE_DIR" "/home/$USER/current"
 cd "/home/$USER/current"
 
 echo "Executando deploy.sh..."
-if ./deploy.sh; then
+if docker compose up -d; then
   echo "Deploy bem-sucedido!"
 else
   echo "Erro no deploy. Iniciando rollback..."

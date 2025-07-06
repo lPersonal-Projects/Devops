@@ -1,0 +1,53 @@
+services:
+  traefik:
+    image: "traefik:v3.0"
+    container_name: "traefik"
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.meu_resolver_le.acme.email=cleytonnobre@outlook.com"
+      - "--certificatesresolvers.meu_resolver_le.acme.storage=/acme.json"
+      - "--certificatesresolvers.meu_resolver_le.acme.httpchallenge.entrypoint=web"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - "./acme.json:/acme.json"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.tls.certresolver=meu_resolver_le"
+      - "traefik.http.routers.dashboard-http.entrypoints=web"
+      - "traefik.http.routers.dashboard-http.middlewares=redirect-to-https"
+    networks:
+      - traefik-net
+
+  status-dev:
+    build:
+      context: ./status
+    image: simple-node-status-dev
+    ports:
+      - "3000:3000"
+    container_name: status-dev
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.devops.rule=Host(`3.148.145.243`)"
+      - "traefik.http.routers.devops.entrypoints=websecure"
+      - "traefik.http.routers.devops.tls.certresolver=meu_resolver_le"
+      - "traefik.http.routers.devops-http.rule=Host(`3.148.145.243`)"
+      - "traefik.http.routers.devops-http.entrypoints=web"
+      - "traefik.http.routers.devops-http.middlewares=redirect-to-https"
+    networks:
+      - traefik-net
+
+networks:
+  traefik-net:
+    driver: bridge
